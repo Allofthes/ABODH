@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a73e8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>البيجر الرقمي</title>
+<style>
+:root{--primary:#1a73e8;--primary-dark:#1557b0;--success:#0f9d58;--danger:#db4437;--warn:#b06000;--bg:#f8f9fa;--card:#fff;--text:#202124;--muted:#5f6368;--border:#dadce0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Segoe UI',Tahoma,system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6;padding-bottom:env(safe-area-inset-bottom)}
+.container{max-width:900px;margin:0 auto;padding:16px}
+header{background:var(--primary);color:#fff;padding:16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.1);padding-top:calc(16px + env(safe-area-inset-top))}
+header h1{font-size:1.3rem;font-weight:600}
+header p{font-size:.85rem;opacity:.9;margin-top:4px}
+.card{background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card h2{font-size:1.1rem;margin-bottom:12px}
+.big-number{font-size:4rem;font-weight:700;color:var(--primary);text-align:center;line-height:1}
+.subtitle{text-align:center;color:var(--muted);font-size:.9rem;margin-top:4px}
+.stat-row{display:flex;gap:12px;margin-top:16px}
+.stat{flex:1;text-align:center;padding:12px;background:var(--bg);border-radius:8px}
+.stat .val{font-size:1.5rem;font-weight:700;color:var(--primary)}
+.stat .lbl{font-size:.8rem;color:var(--muted)}
+input,button,select,textarea{font-family:inherit;font-size:1rem;width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(26,115,232,.15)}
+textarea{resize:vertical;font-family:monospace;font-size:.82rem;direction:ltr;text-align:left;line-height:1.4}
+button{background:var(--primary);color:#fff;border:none;font-weight:600;cursor:pointer;transition:background .15s;-webkit-appearance:none;min-height:48px}
+button:hover{background:var(--primary-dark)}
+button:disabled{background:#ccc;cursor:not-allowed}
+button.secondary{background:var(--bg);color:var(--text);border:1px solid var(--border)}
+button.success{background:var(--success)}
+button.danger{background:var(--danger)}
+.btn-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.btn-row button{flex:1;min-width:140px}
+.form-group{margin-bottom:12px}
+.form-group label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:6px}
+.queue-item{display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border-radius:8px;margin-bottom:8px;border-right:4px solid var(--border)}
+.queue-item.serving{border-right-color:var(--success);background:#e6f4ea}
+.queue-item .num{width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--primary);color:#fff;border-radius:50%;font-weight:700;font-size:1.1rem;flex-shrink:0}
+.queue-item.serving .num{background:var(--success)}
+.queue-item .info{flex:1;min-width:0}
+.queue-item .info .name{font-weight:600}
+.queue-item .info .meta{font-size:.8rem;color:var(--muted)}
+.queue-item .actions{display:flex;gap:6px}
+.icon-btn{width:44px;height:44px;padding:0;border-radius:8px;background:var(--bg);color:var(--muted);border:1px solid var(--border);cursor:pointer;font-size:1rem}
+.empty{text-align:center;color:var(--muted);padding:24px 0;font-size:.9rem}
+.toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#202124;color:#fff;padding:12px 20px;border-radius:8px;font-size:.9rem;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:1000;max-width:90%;text-align:center}
+.qr-box{text-align:center;padding:16px;background:var(--bg);border-radius:8px;margin-top:12px}
+.qr-box img{max-width:220px;width:100%;border-radius:8px}
+.qr-box .link{font-size:.72rem;color:var(--muted);word-break:break-all;margin-top:8px;direction:ltr;background:#fff;padding:8px;border-radius:6px}
+.status-box{padding:12px;border-radius:8px;text-align:center;font-weight:600;margin-top:16px}
+.status-serving{background:#e6f4ea;color:var(--success)}
+.status-waiting{background:#fef7e0;color:var(--warn)}
+.footer{text-align:center;color:var(--muted);font-size:.75rem;padding:16px}
+.setup-warning{background:#fef7e0;color:var(--warn);padding:12px;border-radius:8px;font-size:.85rem;margin-bottom:16px;line-height:1.7}
+.setup-warning.danger{background:#fce8e6;color:var(--danger)}
+.setup-success{background:#e6f4ea;color:var(--success);padding:10px 12px;border-radius:8px;font-size:.85rem;margin-bottom:12px}
+.settings-row{display:flex;gap:8px}
+.settings-row input{flex:1}
+.settings-row button{flex:0 0 auto;width:auto;padding:12px 20px}
+@media(max-width:480px){.big-number{font-size:3rem}.card{padding:16px}}
+
+/* شاشة تسجيل الدخول */
+.login-card { max-width: 400px; margin: 40px auto; text-align: center; }
+
+/* التقارير */
+.period-nav{display:flex;gap:8px;margin-bottom:10px}
+.period-nav button{flex:1}
+.period-btn{background:var(--bg);color:var(--text);border:2px solid var(--border);font-weight:600;padding:10px}
+.period-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.period-nav-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.period-nav-row button{flex:0 0 auto;padding:10px 14px;width:auto;min-width:80px}
+.period-label{flex:1;text-align:center;font-weight:700;padding:10px;background:var(--bg);border-radius:8px;border:1px solid var(--border);font-size:.9rem;min-width:140px}
+.date-input{flex:0 0 160px;padding:10px!important;font-size:.85rem!important;width:auto!important}
+.report{background:#fff;padding:24px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.report-header{text-align:center;border-bottom:3px solid var(--primary);padding-bottom:16px;margin-bottom:20px}
+.report-header h1{color:var(--primary);font-size:1.5rem;margin-bottom:6px}
+.report-store{font-size:1.15rem;font-weight:700}
+.report-period-badge{display:inline-block;background:var(--primary);color:#fff;padding:3px 12px;border-radius:20px;font-size:.8rem;font-weight:600;margin:6px 0}
+.report-date{color:var(--muted);font-size:.9rem;margin-top:4px}
+.report-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px}
+.rstat{text-align:center;padding:14px 8px;background:var(--bg);border-radius:10px;border:1px solid var(--border)}
+.rval{font-size:1.4rem;font-weight:700;color:var(--primary);line-height:1.2;word-break:break-word}
+.rlbl{font-size:.72rem;color:var(--muted);margin-top:4px}
+.report-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.report-table th{background:var(--primary);color:#fff;padding:9px 5px;text-align:center;font-weight:600;font-size:.75rem}
+.report-table td{padding:8px 5px;border-bottom:1px solid var(--border);text-align:center;vertical-align:middle}
+.report-table tbody tr:nth-child(even) td{background:#fafbfc}
+.report-table tbody tr{page-break-inside:avoid}
+.status-tag{padding:3px 9px;border-radius:5px;font-size:.7rem;font-weight:700;white-space:nowrap}
+.status-done{background:#e6f4ea;color:var(--success)}
+.status-cancelled{background:#fce8e6;color:var(--danger)}
+.status-serving{background:#e8f0fe;color:var(--primary)}
+.status-waiting{background:#fef7e0;color:var(--warn)}
+.report-footer{text-align:center;color:var(--muted);font-size:.72rem;margin-top:20px;padding-top:12px;border-top:1px dashed var(--border)}
+
+/* زر إيقاف التنبيه */
+#stopAlarmBtn{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:90%;max-width:400px;padding:20px;font-size:1.3rem;font-weight:bold;background-color:var(--danger);color:white;border:none;border-radius:12px;box-shadow:0 4px 15px rgba(219,68,55,0.5);cursor:pointer;z-index:9999;display:none;animation:pulse 1.5s infinite}
+@keyframes pulse{0%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.05)}100%{transform:translateX(-50%) scale(1)}}
+
+/* الترحيب والأشخاص المنتظرين */
+.welcome-banner{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:20px;border-radius:12px;text-align:center;margin-bottom:16px;box-shadow:0 4px 12px rgba(26,115,232,0.3);animation:slideDown 0.5s ease-out}
+.welcome-banner h2{font-size:1.3rem;margin-bottom:6px;color:#fff}
+.welcome-banner p{font-size:0.95rem;opacity:0.9}
+.ahead-card{display:flex;align-items:center;justify-content:center;gap:15px;background:#fff;padding:20px;border-radius:12px;border:2px dashed var(--primary);margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
+.ahead-icon{font-size:3rem;line-height:1}
+.ahead-info{text-align:right}
+.ahead-info .title{font-size:0.9rem;color:var(--muted);margin-bottom:4px}
+.ahead-info .count{font-size:1.4rem;font-weight:700;color:var(--primary)}
+@keyframes slideDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+
+@media print{body{background:#fff!important}body *{visibility:hidden}#reportPrint,#reportPrint *{visibility:visible}#reportPrint{position:absolute;left:0;top:0;width:100%;padding:0;margin:0;box-shadow:none;border-radius:0}.no-print{display:none!important}.report-table{font-size:10px}.report-table th{background:#1a73e8!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.status-tag,.rstat,.report-header,.report-period-badge{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{margin:1cm;size:A4 portrait}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<button id="stopAlarmBtn" onclick="window.stopAlarm()">🛑 لقد استلمت، إيقاف التنبيه</button>
+
+<script type="module">
+import { initializeApp, deleteApp, getApps } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+/* ============ Firebase Config ============ */
+const FB_KEY = 'pager_fb_cfg_v1';
+const IS_FILE = location.protocol === 'file:';
+const DB_KEY = 'pager_db_v7'; // تم تحديث الإصدار لتفادي أي تعارض
+
+function readUrlConfig() { try { const p = new URLSearchParams(location.search).get('cfg'); if (!p) return null; const parsed = JSON.parse(decodeURIComponent(atob(p))); if (parsed && parsed.apiKey && parsed.databaseURL) { localStorage.setItem(FB_KEY, JSON.stringify(parsed)); return parsed; } } catch (e) {} return null; }
+function readStoredConfig() { try { const s = localStorage.getItem(FB_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
+
+let firebaseApp = null, rootRef = null, FIREBASE_ENABLED = false;
+
+function initFirebase(cfg) {
+  if (firebaseApp) { try { getApps().forEach(a => { try { deleteApp(a); } catch {} }); } catch {} firebaseApp = null; rootRef = null; FIREBASE_ENABLED = false; }
+  if (!cfg || !cfg.apiKey || !cfg.databaseURL || String(cfg.apiKey).includes('REPLACE_ME')) return false;
+  try { firebaseApp = initializeApp(cfg, 'pager-' + Date.now()); rootRef = ref(getDatabase(firebaseApp), 'pager'); FIREBASE_ENABLED = true; return true; } catch (e) { return false; }
+}
+const startConfig = readUrlConfig() || readStoredConfig();
+initFirebase(startConfig);
+
+/* ==========================================
+   طبقة البيانات (Data Layer) - التحديث الاحترافي
+   ========================================== */
+function defaultDB() {
+  return {
+    queue: [],
+    history: [],
+    nextNumber: 1,
+    currentNumber: 0,
+    storeName: '',
+    avgServiceTime: 5,
+    settings: { soundEnabled: true, language: 'ar', theme: 'light', autoRefresh: true },
+    lastUpdated: Date.now()
+  };
+}
+
+function normalizeDB(data) {
+  if (!data || typeof data !== 'object') return defaultDB();
+  const normalized = { ...data };
+
+  // 1. معالجة الطابور
+  if (normalized.queue) {
+    if (Array.isArray(normalized.queue)) {
+      normalized.queue = normalized.queue.filter(Boolean);
+    } else if (typeof normalized.queue === 'object') {
+      normalized.queue = Object.values(normalized.queue)
+        .filter(Boolean)
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    } else {
+      normalized.queue = [];
+    }
+  } else { normalized.queue = []; }
+
+  // 2. معالجة السجل
+  if (normalized.history) {
+    if (Array.isArray(normalized.history)) {
+      normalized.history = normalized.history.filter(Boolean);
+    } else if (typeof normalized.history === 'object') {
+      normalized.history = Object.values(normalized.history)
+        .filter(Boolean)
+        .sort((a, b) => (b.completedAt || b.createdAt || 0) - (a.completedAt || a.createdAt || 0));
+    } else {
+      normalized.history = [];
+    }
+  } else { normalized.history = []; }
+
+  // 3. التأكد من القيم الافتراضية
+  if (!normalized.settings || typeof normalized.settings !== 'object') {
+    normalized.settings = { soundEnabled: true, language: 'ar', theme: 'light' };
+  }
+  if (!normalized.nextNumber || typeof normalized.nextNumber !== 'number') normalized.nextNumber = 1;
+  if (!normalized.currentNumber || typeof normalized.currentNumber !== 'number') normalized.currentNumber = 0;
+  if (typeof normalized.storeName !== 'string') normalized.storeName = '';
+  if (!normalized.avgServiceTime) normalized.avgServiceTime = 5;
+
+  return normalized;
+}
+
+function loadLocal() {
+  try {
+    const data = localStorage.getItem(DB_KEY);
+    if (data) return JSON.parse(data);
+  } catch (error) { console.error('خطأ في تحميل البيانات المحلية:', error); }
+  return null;
+}
+
+function saveLocal(data) {
+  try { localStorage.setItem(DB_KEY, JSON.stringify(data)); }
+  catch (error) { console.error('خطأ في حفظ البيانات محلياً:', error); throw error; }
+}
+
+async function getDB() {
+  if (FIREBASE_ENABLED) {
+    try {
+      const snapshot = await get(rootRef);
+      const rawData = snapshot.val();
+      if (!rawData) return defaultDB();
+      return normalizeDB(rawData);
+    } catch (error) {
+      console.error('❌ خطأ في جلب البيانات من Firebase:', error);
+      const localData = loadLocal();
+      return localData ? normalizeDB(localData) : defaultDB();
+    }
+  }
+  const localData = loadLocal();
+  return localData ? normalizeDB(localData) : defaultDB();
+}
+
+let fbUnsub = null;
+let localHandler = null;
+let bc = null;
+
+function cleanupSubscriptions() {
+  if (fbUnsub) { try { fbUnsub(); } catch (error) { console.error(error); } fbUnsub = null; }
+  if (bc) { try { bc.close(); } catch (error) { console.error(error); } bc = null; }
+  if (localHandler) { try { window.removeEventListener('storage', localHandler); } catch (error) { console.error(error); } localHandler = null; }
+}
+
+function subscribe(cb) {
+  cleanupSubscriptions();
+
+  if (FIREBASE_ENABLED) {
+    fbUnsub = onValue(rootRef, (snapshot) => {
+      try {
+        const rawData = snapshot.val();
+        cb(rawData ? normalizeDB(rawData) : defaultDB());
+      } catch (error) { console.error('❌ خطأ في معالجة تحديث Firebase:', error); cb(defaultDB()); }
+    }, (error) => { console.error('❌ خطأ في الاتصال بـ Firebase:', error); });
+  } else {
+    if (typeof BroadcastChannel !== 'undefined') {
+      bc = new BroadcastChannel('pager_db_channel');
+      bc.onmessage = (event) => {
+        if (event.data && event.data.type === 'DB_UPDATE') {
+          cb(normalizeDB(loadLocal()));
+        }
+      };
+    }
+    localHandler = (e) => {
+      if (e.key === DB_KEY) cb(normalizeDB(loadLocal()));
+    };
+    window.addEventListener('storage', localHandler);
+  }
+}
+
+function notifyLocalUpdate() {
+  if (bc) { try { bc.postMessage({ type: 'DB_UPDATE', timestamp: Date.now() }); } catch (error) {} }
+  try {
+    const currentData = localStorage.getItem(DB_KEY);
+    localStorage.setItem(DB_KEY, currentData || JSON.stringify(defaultDB()));
+  } catch (error) {}
+}
+
+async function saveDB(data) {
+  const normalized = normalizeDB(data);
+  
+  if (FIREBASE_ENABLED) {
+    try {
+      // هام جداً: إضافة currentNumber و storeName للحفاظ عليها من الحذف
+      const dataToSave = {
+        queue: normalized.queue,
+        history: normalized.history,
+        nextNumber: normalized.nextNumber,
+        currentNumber: normalized.currentNumber,
+        storeName: normalized.storeName,
+        avgServiceTime: normalized.avgServiceTime,
+        settings: normalized.settings,
+        lastUpdated: Date.now()
+      };
+      await set(rootRef, dataToSave);
+      notifyLocalUpdate();
+      return true;
+    } catch (error) {
+      console.error('❌ خطأ في حفظ البيانات في Firebase:', error);
+      try { saveLocal(normalized); } catch (localError) {}
+      throw error;
+    }
+  } else {
+    try {
+      saveLocal(normalized);
+      notifyLocalUpdate();
+      return true;
+    } catch (error) {
+      console.error('❌ خطأ في حفظ البيانات محلياً:', error);
+      throw error;
+    }
+  }
+}
+
+window.addEventListener('beforeunload', cleanupSubscriptions);
+
+/* ============ Auth & Utils ============ */
+const PASS_KEY = 'pager_admin_pass_v1';
+function getAdminPass() { return localStorage.getItem(PASS_KEY) || '1234'; }
+function isAdminAuth() { return sessionStorage.getItem('pager_admin_auth') === 'true'; }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function uid() { return (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)); }
+function toast(msg, ms = 3000) { document.querySelectorAll('.toast').forEach(t => t.remove()); const el = document.createElement('div'); el.className = 'toast'; el.textContent = msg; document.body.appendChild(el); setTimeout(() => el.remove(), ms); }
+
+let audioCtx = null;
+function playBeep() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination); o.frequency.value = 880; o.type = 'sine';
+    g.gain.setValueAtTime(0.4, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
+    o.start(); o.stop(audioCtx.currentTime + 1.2);
+  } catch {}
+}
+async function requestNotifyPermission() { if (!('Notification' in window)) { toast('المتصفح لا يدعم الإشعارات'); return false; } if (Notification.permission === 'granted') return true; try { return (await Notification.requestPermission()) === 'granted'; } catch { return false; } }
+function showNotification(title, body) { if ('Notification' in window && Notification.permission === 'granted') { try { new Notification(title, { body, tag: 'pager', requireInteraction: true }); } catch {} } }
+
+/* ============ نظام التنبيه المتكرر ============ */
+let alarmInterval = null;
+function startAlarm() { if (alarmInterval) return; playBeep(); alarmInterval = setInterval(() => { playBeep(); if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]); }, 3000); const btn = document.getElementById('stopAlarmBtn'); if (btn) btn.style.display = 'block'; }
+function stopAlarm() { if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; } const btn = document.getElementById('stopAlarmBtn'); if (btn) btn.style.display = 'none'; }
+
+/* ============ Router ============ */
+let currentView = null;
+function handleDataUpdate() { if (currentView === 'admin') refreshAdmin(); else if (currentView === 'customer') refreshCustomer(); }
+function render() {
+  const token = new URLSearchParams(location.search).get('token');
+  const app = document.getElementById('app');
+  if (token) { currentView = 'customer'; renderCustomer(app, token); }
+  else { if (isAdminAuth()) { currentView = 'admin'; renderAdmin(app); } else { currentView = 'login'; renderLogin(app); } }
+}
+
+/* ============ Login View ============ */
+function renderLogin(root) {
+  root.innerHTML = `<header><h1>🔒 لوحة التحكم</h1><p>الرجاء إدخال كلمة المرور</p></header><div class="container"><div class="card login-card"><div style="font-size:3rem; margin-bottom:15px;">🔐</div><input type="password" id="adminPassInput" placeholder="كلمة المرور (الافتراضية 1234)" style="text-align:center; font-size:1.2rem; margin-bottom:15px;" onkeypress="if(event.key==='Enter') window.loginAdmin()"><button onclick="window.loginAdmin()">دخول</button></div></div>`;
+}
+function loginAdmin() { const val = document.getElementById('adminPassInput').value; if (val === getAdminPass()) { sessionStorage.setItem('pager_admin_auth', 'true'); render(); } else { toast('❌ كلمة المرور غير صحيحة'); } }
+function logoutAdmin() { sessionStorage.removeItem('pager_admin_auth'); render(); }
+
+/* ============ Admin View ============ */
+async function renderAdmin(root) {
+  const storedCfg = readStoredConfig();
+  const cfgText = storedCfg ? JSON.stringify(storedCfg, null, 2) : '';
+
+  root.innerHTML = `
+    <header><h1>🔔 البيجر الرقمي</h1><p>لوحة التحكم</p></header>
+    <div class="container">
+      ${!FIREBASE_ENABLED && !IS_FILE ? `<div class="setup-warning">⚠️ <strong>وضع تجريبي (جهاز واحد)</strong><br>أضف إعداد Firebase أدناه لتعمل عبر جوالات العملاء.</div>` : ''}
+      ${FIREBASE_ENABLED ? `<div class="setup-success">✅ Firebase مُفعّل — يعمل عبر الأجهزة</div>` : ''}
+
+      <div class="card">
+        <h2>الدور الحالي</h2>
+        <div class="big-number" id="currentNum">—</div>
+        <div class="subtitle" id="currentSub">لا يوجد عميل يُخدم الآن</div>
+        <div class="btn-row">
+          <button class="success" onclick="window.callNext()">📣 ناد التالي</button>
+          <button class="secondary" onclick="window.completeCurrent()">✅ إنهاء</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <button onclick="window.openQuickCashier()" style="background:var(--warn); font-size:1.2rem; padding:20px; color:#fff;">⚡ وضع الكاشير السريع (ربط الفاتورة)</button>
+      </div>
+
+      <div class="card"><button onclick="window.showReport()">📊 التقارير (يومي / أسبوعي / شهري)</button></div>
+
+      <div class="card">
+        <h2>إضافة عميل يدوياً</h2>
+        <div class="form-group"><label>اسم العميل (اختياري)</label><input id="custName" placeholder="مثال: أحمد" maxlength="40"></div>
+        <div class="form-group"><label>رقم الجوال (اختياري)</label><input id="custPhone" placeholder="05xxxxxxxx" maxlength="15" inputmode="tel"></div>
+        <button onclick="window.addCustomer()">➕ إضافة وتوليد رابط/QR</button>
+        <div id="newCustomerBox"></div>
+      </div>
+
+      <div class="card">
+        <h2>الطابور (<span id="queueCount">0</span>)</h2>
+        <div id="queueList"></div>
+      </div>
+
+      <div class="card">
+        <h2>⚙️ إعدادات المنشأة</h2>
+        <div class="form-group">
+          <label>اسم المنشأة (يظهر في الترحيب والتقارير)</label>
+          <div class="settings-row">
+            <input id="storeNameInput" placeholder="مثال: مطعم الأصالة" maxlength="60">
+            <button onclick="window.saveStoreName()">💾 حفظ</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🔒 الأمان</h2>
+        <div class="form-group">
+          <label>تغيير كلمة مرور لوحة التحكم</label>
+          <div class="settings-row">
+            <input id="newPassInput" type="password" placeholder="كلمة المرور الجديدة">
+            <button onclick="window.saveNewPass()">💾 حفظ</button>
+          </div>
+        </div>
+        <button class="secondary" onclick="window.logoutAdmin()" style="margin-top:10px;">🚪 تسجيل الخروج</button>
+      </div>
+
+      <div class="card">
+        <h2>🔥 إعداد Firebase (مجاني)</h2>
+        <div class="form-group">
+          <label>تكوين Firebase (JSON)</label>
+          <textarea id="fbConfigInput" rows="6" placeholder='{ "apiKey": "...", "databaseURL": "https://....firebaseio.com", "projectId": "..." }'>${esc(cfgText)}</textarea>
+        </div>
+        <div class="btn-row">
+          <button onclick="window.saveFirebaseConfig()">💾 حفظ وتفعيل</button>
+          <button class="secondary" onclick="window.clearFirebaseConfig()">🗑️ إزالة</button>
+        </div>
+      </div>
+
+      <div class="footer">البيجر الرقمي · نسخة مجانية</div>
+    </div>
+  `;
+  const db = await getDB();
+  const inp = document.getElementById('storeNameInput');
+  if (inp) inp.value = db.storeName || '';
+  refreshAdmin();
+}
+
+/* ============ Admin Data Functions ============ */
+function saveNewPass() { const inp = document.getElementById('newPassInput'); if (!inp || !inp.value.trim()) { toast('أدخل كلمة مرور جديدة'); return; } localStorage.setItem(PASS_KEY, inp.value.trim()); toast('✅ تم تغيير كلمة المرور'); inp.value = ''; }
+function saveFirebaseConfig() { const txt = document.getElementById('fbConfigInput').value.trim(); if (!txt) { toast('أدخل التكوين أولاً'); return; } let cfg = null; try { cfg = JSON.parse(txt); } catch { const m = txt.match(/\{[\s\S]*\}/); if (m) { try { cfg = JSON.parse(m[0]); } catch {} } } if (!cfg) { toast('التنسيق غير صحيح'); return; } if (!cfg.apiKey || !cfg.databaseURL) { toast('يجب أن يحتوي على apiKey و databaseURL'); return; } localStorage.setItem(FB_KEY, JSON.stringify(cfg)); if (!initFirebase(cfg)) { toast('❌ فشل التهيئة'); return; } subscribe(handleDataUpdate); toast('✅ تم تفعيل Firebase'); renderAdmin(document.getElementById('app')); }
+function clearFirebaseConfig() { if (!confirm('إزالة تكوين Firebase؟')) return; localStorage.removeItem(FB_KEY); initFirebase(null); subscribe(handleDataUpdate); toast('تمت الإزالة'); renderAdmin(document.getElementById('app')); }
+async function saveStoreName() { const name = (document.getElementById('storeNameInput').value || '').trim(); const db = await getDB(); await saveDB({ ...db, storeName: name }); toast('تم حفظ اسم المنشأة'); }
+
+async function refreshAdmin() {
+  if (currentView !== 'admin') return;
+  const db = await getDB();
+  const queue = db.queue || [];
+  const waiting = queue.filter(c => c.status === 'waiting').sort((a,b) => a.number - b.number);
+  const serving = queue.find(c => c.status === 'serving');
+  const cn = document.getElementById('currentNum'); if (cn) cn.textContent = serving ? serving.number : '—';
+  const cs = document.getElementById('currentSub'); if (cs) cs.textContent = serving ? `${serving.name} · يُخدم الآن` : 'لا يوجد عميل يُخدم الآن';
+  const qc = document.getElementById('queueCount'); if (qc) qc.textContent = waiting.length;
+  const ql = document.getElementById('queueList'); if (!ql) return;
+  if (!waiting.length && !serving) { ql.innerHTML = '<div class="empty">لا يوجد عملاء في الطابور</div>'; return; }
+  let html = '';
+  if (serving) { html += `<div class="queue-item serving"><div class="num">${serving.number}</div><div class="info"><div class="name">${esc(serving.name)}</div><div class="meta">يُخدم الآن</div></div><div class="actions"><button class="icon-btn danger" onclick="window.cancelCustomer('${serving.id}')">✕</button></div></div>`; }
+  waiting.forEach((c, i) => { html += `<div class="queue-item"><div class="num">${c.number}</div><div class="info"><div class="name">${esc(c.name)}</div><div class="meta">بالانتظار · ترتيبه ${i+1}</div></div><div class="actions"><button class="icon-btn" onclick="window.showQR('${c.id}')" title="عرض QR">▦</button><button class="icon-btn danger" onclick="window.cancelCustomer('${c.id}')">✕</button></div></div>`; });
+  ql.innerHTML = html;
+}
+
+function buildCustomerLink(customerId) { const base = `${location.origin}${location.pathname}?token=${customerId}`; if (!FIREBASE_ENABLED) return base; const cfg = readStoredConfig(); if (!cfg) return base; try { const b64 = btoa(encodeURIComponent(JSON.stringify(cfg))); return `${base}&cfg=${encodeURIComponent(b64)}`; } catch { return base; } }
+
+async function addCustomer() {
+  const name = (document.getElementById('custName').value || '').trim() || 'عميل';
+  const phone = (document.getElementById('custPhone').value || '').trim();
+  const db = await getDB();
+  const customer = { id: uid(), number: db.nextNumber, name, phone, status: 'waiting', createdAt: Date.now() };
+  const queue = (db.queue || []).concat(customer);
+  await saveDB({ ...db, queue, nextNumber: db.nextNumber + 1 });
+  document.getElementById('custName').value = ''; document.getElementById('custPhone').value = '';
+  toast(`تمت إضافة ${customer.name} برقم ${customer.number}`);
+  showQR(customer.id);
+}
+
+function copyText(t) { navigator.clipboard.writeText(t).then(() => toast('تم النسخ')).catch(() => toast('تعذر النسخ')); }
+function shareLink(t) { if (navigator.share) navigator.share({ title: 'رابط دورك', url: t }).catch(() => {}); else copyText(t); }
+
+function showQR(id) {
+  const link = buildCustomerLink(id);
+  const box = document.getElementById('newCustomerBox');
+  const canQR = !IS_FILE;
+  box.innerHTML = `<div class="qr-box">
+    ${canQR ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(link)}" alt="QR">` : '<div class="setup-warning danger">QR يحتاج استضافة</div>'}
+    <div class="link">${esc(link)}</div>
+    <div class="btn-row"><button class="secondary" onclick="window.copyText('${esc(link)}')">📋 نسخ</button><button class="secondary" onclick="window.shareLink('${esc(link)}')">📤 مشاركة</button></div>
+  </div>`;
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function callNext() {
+  const db = await getDB();
+  let queue = (db.queue || []).filter(c => c.status !== 'done');
+  const waiting = queue.filter(c => c.status === 'waiting').sort((a,b) => a.number - b.number);
+  if (!waiting.length) { toast('لا يوجد عملاء في الانتظار'); return; }
+  queue = queue.filter(c => c.status !== 'serving');
+  const next = waiting[0]; next.status = 'serving'; next.servedAt = Date.now();
+  await saveDB({ ...db, queue, currentNumber: next.number });
+  showNotification('🔔 دور جديد', `يُخدم الآن رقم ${next.number} - ${next.name}`);
+}
+async function completeCurrent() { const db = await getDB(); const serving = (db.queue || []).find(c => c.status === 'serving'); const queue = (db.queue || []).filter(c => c.status !== 'serving'); const history = (db.history || []).slice(); if (serving) history.push({ ...serving, status: 'done', completedAt: Date.now() }); await saveDB({ ...db, queue, history, currentNumber: 0 }); toast('تم إنهاء الدور'); }
+async function cancelCustomer(id) { const db = await getDB(); const customer = (db.queue || []).find(c => c.id === id); const queue = (db.queue || []).filter(c => c.id !== id); const history = (db.history || []).slice(); if (customer) history.push({ ...customer, status: 'cancelled', completedAt: Date.now() }); await saveDB({ ...db, queue, history }); toast('تم الإلغاء'); }
+
+/* ============ Quick Cashier Logic ============ */
+async function processQuickInvoice(e) {
+  if (e.key !== 'Enter') return;
+  const input = document.getElementById('quickInvoiceInput');
+  const invoiceNumber = input.value.trim();
+  if (!invoiceNumber) return;
+
+  const db = await getDB();
+  const customer = { id: uid(), number: db.nextNumber, name: `فاتورة ${invoiceNumber}`, phone: '', status: 'waiting', createdAt: Date.now() };
+  const queue = (db.queue || []).concat(customer);
+  await saveDB({ ...db, queue, nextNumber: db.nextNumber + 1 });
+  
+  playBeep();
+  document.getElementById('quickResult').innerHTML = `✅ تم إضافة الفاتورة (${invoiceNumber}) برقم دور ${customer.number}`;
+  input.value = '';
+  showQR(customer.id);
+}
+function openQuickCashier() {
+  const screen = document.getElementById('quickCashierScreen');
+  screen.style.display = 'flex';
+  const input = document.getElementById('quickInvoiceInput');
+  input.value = '';
+  input.focus();
+  document.getElementById('quickResult').innerHTML = '';
+}
+function closeQuickCashier() { document.getElementById('quickCashierScreen').style.display = 'none'; }
+
+/* ============ Reports ============ */
+let reportPeriod = 'daily'; let reportAnchor = new Date();
+function showReport() { currentView = 'report'; reportPeriod = 'daily'; reportAnchor = new Date(); renderReportView(); }
+async function renderReportView() { if (currentView !== 'report') return; const db = await getDB(); renderReport(db); }
+function setReportPeriod(p) { reportPeriod = p; renderReportView(); }
+function navReport(dir) { const d = new Date(reportAnchor); if (reportPeriod === 'daily') d.setDate(d.getDate() + dir); else if (reportPeriod === 'weekly') d.setDate(d.getDate() + 7 * dir); else d.setMonth(d.getMonth() + dir); reportAnchor = d; renderReportView(); }
+function goReportToday() { reportAnchor = new Date(); renderReportView(); }
+function jumpToDate(val) { if (!val) return; reportAnchor = new Date(val + 'T12:00:00'); renderReportView(); }
+function getRange(period, anchor) {
+  const d = new Date(anchor); d.setHours(0,0,0,0); let start, end, label;
+  if (period === 'daily') { start = new Date(d); end = new Date(d); end.setDate(end.getDate() + 1); label = d.toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); }
+  else if (period === 'weekly') { const day = d.getDay(); start = new Date(d); start.setDate(start.getDate() - day); end = new Date(start); end.setDate(end.getDate() + 7); const lastDay = new Date(end.getTime() - 1); label = `${start.toLocaleDateString('ar-EG', {day:'numeric', month:'long'})} ← ${lastDay.toLocaleDateString('ar-EG',{day:'numeric',month:'long',year:'numeric'})}`; }
+  else { start = new Date(d.getFullYear(), d.getMonth(), 1); end = new Date(d.getFullYear(), d.getMonth() + 1, 1); label = start.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' }); }
+  return { start: start.getTime(), end: end.getTime(), label };
+}
+
+function renderReport(db) {
+  const root = document.getElementById('app'); const now = Date.now(); const range = getRange(reportPeriod, reportAnchor); const isCurrent = range.start <= now && now < range.end;
+  const inRange = (ms) => ms && ms >= range.start && ms < range.end;
+  const history = (db.history || []).filter(h => inRange(h.completedAt)); const activeQueue = isCurrent ? (db.queue || []) : [];
+  const done = history.filter(h => h.status === 'done'); const cancelled = history.filter(h => h.status === 'cancelled'); const serving = activeQueue.filter(c => c.status === 'serving'); const waiting = activeQueue.filter(c => c.status === 'waiting');
+  const waitTimes = done.filter(h => h.servedAt).map(h => (h.servedAt - h.createdAt) / 60000); const avgWait = waitTimes.length ? (waitTimes.reduce((a,b) => a+b, 0) / waitTimes.length).toFixed(1) : '—';
+  const allRows = [...done, ...cancelled, ...serving, ...waiting].sort((a,b) => (a.createdAt || 0) - (b.createdAt || 0));
+  const hourCounts = {}; allRows.forEach(r => { if (r.createdAt) { const h = new Date(r.createdAt).getHours(); hourCounts[h] = (hourCounts[h]||0)+1; } });
+  let peakHour = null, peakCount = 0; Object.entries(hourCounts).forEach(([h,c]) => { if (c > peakCount) { peakCount = c; peakHour = h; } });
+  const peakHourStr = peakHour !== null ? `${String(peakHour).padStart(2,'0')}:00` : '—';
+  const fmtTime = (ms) => ms ? new Date(ms).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '—';
+  const periodLabels = { daily: 'تقرير يومي', weekly: 'تقرير أسبوعي', monthly: 'تقرير شهري' };
+  
+  let tableRows = '';
+  allRows.forEach((r, i) => {
+    let rowStatus, statusLabel;
+    if (r.status === 'done') { rowStatus = 'done'; statusLabel = 'مكتمل'; } else if (r.status === 'cancelled') { rowStatus = 'cancelled'; statusLabel = 'ملغي'; } else if (r.status === 'serving') { rowStatus = 'serving'; statusLabel = 'يُخدم'; } else { rowStatus = 'waiting'; statusLabel = 'بالانتظار'; }
+    let waitMin = '—'; if (r.servedAt) waitMin = Math.round((r.servedAt - r.createdAt) / 60000); else if (r.status === 'waiting') waitMin = Math.round((Date.now() - r.createdAt) / 60000) + ' ⏳';
+    tableRows += `<tr><td>${i+1}</td><td><strong>${r.number}</strong></td><td>${esc(r.name)}</td><td>${fmtTime(r.createdAt)}</td><td>${fmtTime(r.servedAt)}</td><td>${fmtTime(r.completedAt)}</td><td>${waitMin}</td><td><span class="status-tag status-${rowStatus}">${statusLabel}</span></td></tr>`;
+  });
+  if (!allRows.length) tableRows = `<tr><td colspan="8" style="text-align:center;padding:24px;color:#999">لا توجد بيانات</td></tr>`;
+
+  let statsHtml = `<div class="rstat"><div class="rval">${allRows.length}</div><div class="rlbl">إجمالي</div></div><div class="rstat"><div class="rval">${done.length}</div><div class="rlbl">مكتمل</div></div><div class="rstat"><div class="rval">${cancelled.length}</div><div class="rlbl">ملغي</div></div><div class="rstat"><div class="rval">${avgWait}</div><div class="rlbl">متوسط الانتظار</div></div><div class="rstat"><div class="rval">${peakHourStr}</div><div class="rlbl">الذروة</div></div>`;
+
+  root.innerHTML = `
+    <div class="container">
+      <div class="no-print">
+        <div class="period-nav"><button class="period-btn ${reportPeriod==='daily'?'active':''}" onclick="window.setReportPeriod('daily')">📅 يومي</button><button class="period-btn ${reportPeriod==='weekly'?'active':''}" onclick="window.setReportPeriod('weekly')">📆 أسبوعي</button><button class="period-btn ${reportPeriod==='monthly'?'active':''}" onclick="window.setReportPeriod('monthly')">🗓️ شهري</button></div>
+        <div class="period-nav-row"><button class="secondary" onclick="window.navReport(-1)">السابق</button><div class="period-label">${range.label}</div><button class="secondary" onclick="window.navReport(1)">التالي</button></div>
+        <div class="period-nav-row"><button class="secondary" onclick="window.goReportToday()" style="flex:1">📌 اليوم</button><input type="date" class="date-input" value="${new Date(reportAnchor).toISOString().slice(0, 10)}" onchange="window.jumpToDate(this.value)"><button onclick="window.print()" style="flex:1">🖨️ طباعة</button><button class="secondary" onclick="window.backToAdmin()" style="flex:1">↩ رجوع</button></div>
+      </div>
+      <div class="report" id="reportPrint">
+        <div class="report-header"><h1>📊 ${periodLabels[reportPeriod]}</h1><div class="report-store">${esc(db.storeName || 'البيجر')}</div><div class="report-period-badge">${range.label}</div></div>
+        <div class="report-stats">${statsHtml}</div>
+        <table class="report-table"><thead><tr><th>#</th><th>الرقم</th><th>الاسم</th><th>الوصول</th><th>النداء</th><th>الإنهاء</th><th>الانتظار</th><th>الحالة</th></tr></thead><tbody>${tableRows}</tbody></table>
+      </div>
+    </div>`;
+}
+function backToAdmin() { currentView = 'admin'; renderAdmin(document.getElementById('app')); }
+
+/* ============ Customer View ============ */
+let customerToken = null; let lastNotifiedState = null;
+function renderCustomer(root, token) {
+  customerToken = token;
+  root.innerHTML = `<div id="customerHeader"><header><h1>🔔 دورك في الطابور</h1><p>ستُحدَّث هذه الصفحة تلقائياً</p></header></div><div class="container"><div id="customerContent"><div class="card"><div class="empty">جاري التحميل...</div></div></div></div>`;
+  refreshCustomer();
+}
+
+async function refreshCustomer() {
+  if (currentView !== 'customer') return;
+  const db = await getDB(); const queue = db.queue || []; const me = queue.find(c => c.id === customerToken);
+  const content = document.getElementById('customerContent'); const header = document.getElementById('customerHeader');
+  if (!content) return;
+
+  if (!me || me.status === 'cancelled' || me.status === 'done') {
+    stopAlarm(); if (header) header.style.display = 'block';
+    content.innerHTML = `<div class="card" style="text-align:center"><div style="font-size:3rem">😕</div><h2 style="margin-top:12px">لم نجد حجزك</h2></div>`; return;
+  }
+  
+  if (me.status === 'serving') {
+    if (header) header.style.display = 'none'; 
+    if (lastNotifiedState !== 'serving') { startAlarm(); showNotification('🎉 حان دورك الآن!', `رقمك ${me.number}`); lastNotifiedState = 'serving'; }
+    content.innerHTML = `<div style="text-align:center; padding-top: 10vh;"><div style="font-size:5rem; margin-bottom:10px; animation: pulse 2s infinite;">🔔</div><h1 style="color:var(--success); font-size:2rem; margin-bottom:10px;">حان دورك الآن!</h1><div class="big-number" style="color:var(--success); font-size:7rem; margin:20px 0; line-height:1;">${me.number}</div><p style="font-size:1.3rem; color:var(--muted); margin-bottom:40px;">يرجى التوجه لنقطة الخدمة</p><button onclick="window.stopAlarm()" style="background-color:var(--danger); color:#fff; padding:25px; font-size:1.6rem; border-radius:15px; box-shadow:0 6px 20px rgba(219,68,55,0.5); width:100%; display:flex; justify-content:center; align-items:center; gap:15px; animation: pulse 1.5s infinite;"><span>🛑</span><span>إيقاف التنبيه</span></button></div>`; return;
+  }
+  
+  if (header) header.style.display = 'block'; if (lastNotifiedState === 'serving') lastNotifiedState = null;
+  const waiting = queue.filter(c => c.status === 'waiting').sort((a,b) => a.number - b.number);
+  const position = waiting.findIndex(c => c.id === me.id); const ahead = position >= 0 ? position : waiting.length;
+  const current = db.currentNumber || 0;
+  if (ahead <= 1 && ahead >= 0 && lastNotifiedState !== 'near') { showNotification('⏰ اقترب دورك', `رقمك ${me.number}`); lastNotifiedState = 'near'; } else if (ahead > 2) { lastNotifiedState = null; }
+  
+  content.innerHTML = `<div class="welcome-banner"><h2>👋 أهلاً بك في ${esc(db.storeName || 'البيجر')}</h2><p>تم تسجيل دورك بنجاح.</p></div><div class="ahead-card"><div class="ahead-icon">👥</div><div class="ahead-info"><div class="title">المنتظرين قبلك</div><div class="count">${ahead === 0 ? 'أنت التالي!' : `${ahead} ${ahead === 1 ? 'شخص' : 'أشخاص'}`}</div></div></div><div class="card" style="text-align:center"><h2 style="color:var(--muted); font-size:1rem">رقم دورك</h2><div class="big-number">${me.number}</div></div><div class="card" style="text-align:center"><h2 style="color:var(--muted); font-size:1rem">يُخدم الآن</h2><div class="big-number" style="color:var(--muted)">${current || '—'}</div></div><div class="footer">أبقِ الصفحة مفتوحة</div>`;
+}
+
+async function enableCustomerNotifs() { const ok = await requestNotifyPermission(); if (ok) { playBeep(); toast('✅ تم تفعيل الإشعارات'); } else toast('لم يتم السماح'); refreshCustomer(); }
+
+/* ============ Boot ============ */
+document.getElementById('quickInvoiceInput')?.addEventListener('keypress', processQuickInvoice);
+subscribe(handleDataUpdate);
+render();
+
+/* ============ Expose to window ============ */
+Object.assign(window, {
+  callNext, completeCurrent, addCustomer, copyText, shareLink, showQR, cancelCustomer,
+  showReport, backToAdmin, saveStoreName, enableCustomerNotifs,
+  setReportPeriod, navReport, goReportToday, jumpToDate,
+  saveFirebaseConfig, clearFirebaseConfig, loginAdmin, logoutAdmin, saveNewPass,
+  stopAlarm, openQuickCashier, closeQuickCashier
+});
+</script>
+
+<!-- شاشة الكاشير السريع -->
+<div id="quickCashierScreen" style="display: none; position: fixed; inset: 0; background: var(--bg); z-index: 5000; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
+    <div style="text-align:center; margin-bottom:20px;">
+        <h1 style="color:var(--primary); font-size:2rem;">⚡ إضافة سريعة (كاشير)</h1>
+        <p style="color:var(--muted);">امسح باركود الفاتورة أو اكتب رقمها واضغط Enter</p>
+    </div>
+    <input type="text" id="quickInvoiceInput" class="quick-input" placeholder="رقم الفاتورة / الباركود" autocomplete="off" style="font-size: 2rem !important; text-align: center; padding: 20px !important; border: 3px solid var(--primary) !important; border-radius: 15px !important; width: 100%; max-width: 500px; margin-bottom: 20px; font-weight: bold;">
+    <div class="btn-row" style="max-width:500px; width:100%;">
+        <button class="secondary" onclick="window.closeQuickCashier()" style="padding:15px; font-size:1.1rem;">إغلاق</button>
+    </div>
+    <div id="quickResult" style="margin-top:20px; text-align:center; font-size:1.2rem; font-weight:bold; color:var(--success);"></div>
+</div>
+</body>
+</html>
