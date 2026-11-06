@@ -10,7 +10,14 @@
 <style>
 :root{--primary:#1a73e8;--primary-dark:#1557b0;--success:#0f9d58;--danger:#db4437;--warn:#b06000;--bg:#f8f9fa;--card:#fff;--text:#202124;--muted:#5f6368;--border:#dadce0}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:'Segoe UI',Tahoma,system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6;padding-bottom:env(safe-area-inset-bottom)}
+body{
+  font-family:'Segoe UI',Tahoma,system-ui,sans-serif;
+  color:var(--text); min-height:100vh; line-height:1.6;
+  padding-bottom:env(safe-area-inset-bottom);
+  -webkit-user-select:none; user-select:none;
+  /* خلفية متدرجة مريحة للعين */
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+}
 .container{max-width:900px;margin:0 auto;padding:16px}
 header{background:var(--primary);color:#fff;padding:16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.1);padding-top:calc(16px + env(safe-area-inset-top))}
 header h1{font-size:1.3rem;font-weight:600}
@@ -96,7 +103,7 @@ button.danger{background:var(--danger)}
 .status-waiting{background:#fef7e0;color:var(--warn)}
 .report-footer{text-align:center;color:var(--muted);font-size:.72rem;margin-top:20px;padding-top:12px;border-top:1px dashed var(--border)}
 
-/* زر إيقاف التنبيه */
+/* زر إيقاف التنبيه العائم */
 #stopAlarmBtn{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:90%;max-width:400px;padding:20px;font-size:1.3rem;font-weight:bold;background-color:var(--danger);color:white;border:none;border-radius:12px;box-shadow:0 4px 15px rgba(219,68,55,0.5);cursor:pointer;z-index:9999;display:none;animation:pulse 1.5s infinite}
 @keyframes pulse{0%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.05)}100%{transform:translateX(-50%) scale(1)}}
 
@@ -110,6 +117,18 @@ button.danger{background:var(--danger)}
 .ahead-info .title{font-size:0.9rem;color:var(--muted);margin-bottom:4px}
 .ahead-info .count{font-size:1.4rem;font-weight:700;color:var(--primary)}
 @keyframes slideDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+
+/* شاشة النداء (Serving) */
+.serving-wrapper { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+.serving-card { background: #fff; border-radius: 24px; padding: 30px; width: 100%; max-width: 500px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); text-align: center; border: 1px solid rgba(255,255,255,0.5); backdrop-filter: blur(10px); }
+.serving-store { font-size: 1.2rem; font-weight: 700; color: var(--primary); margin-bottom: 15px; padding-bottom: 15px; border-bottom: 2px dashed var(--border); }
+.serving-bell { font-size: 4rem; margin-bottom: 10px; display: inline-block; animation: ring 2s infinite ease-in-out; }
+@keyframes ring { 0% { transform: rotate(0); } 10% { transform: rotate(15deg); } 20% { transform: rotate(-10deg); } 30% { transform: rotate(5deg); } 40% { transform: rotate(-5deg); } 50%, 100% { transform: rotate(0); } }
+.serving-title { color: var(--success); font-size: 1.8rem; font-weight: 800; margin-bottom: 5px; }
+.serving-number { color: var(--success); font-size: 7rem; font-weight: 900; line-height: 1; margin: 15px 0; text-shadow: 0 4px 15px rgba(15,157,88,0.2); }
+.serving-desc { font-size: 1.2rem; color: var(--muted); margin-bottom: 30px; font-weight: 600; }
+.serving-stop-btn { background-color: var(--danger); color: #fff; padding: 20px; font-size: 1.4rem; font-weight: 700; border-radius: 16px; width: 100%; display: flex; justify-content: center; align-items: center; gap: 10px; box-shadow: 0 8px 20px rgba(219,68,55,0.4); animation: pulse-btn 1.5s infinite; border: none; }
+@keyframes pulse-btn { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
 
 @media print{body{background:#fff!important}body *{visibility:hidden}#reportPrint,#reportPrint *{visibility:visible}#reportPrint{position:absolute;left:0;top:0;width:100%;padding:0;margin:0;box-shadow:none;border-radius:0}.no-print{display:none!important}.report-table{font-size:10px}.report-table th{background:#1a73e8!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.status-tag,.rstat,.report-header,.report-period-badge{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{margin:1cm;size:A4 portrait}}
 </style>
@@ -125,13 +144,12 @@ import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/fir
 /* ============ Firebase Config ============ */
 const FB_KEY = 'pager_fb_cfg_v1';
 const IS_FILE = location.protocol === 'file:';
-const DB_KEY = 'pager_db_v7'; // تم تحديث الإصدار لتفادي أي تعارض
+const DB_KEY = 'pager_db_v7';
 
 function readUrlConfig() { try { const p = new URLSearchParams(location.search).get('cfg'); if (!p) return null; const parsed = JSON.parse(decodeURIComponent(atob(p))); if (parsed && parsed.apiKey && parsed.databaseURL) { localStorage.setItem(FB_KEY, JSON.stringify(parsed)); return parsed; } } catch (e) {} return null; }
 function readStoredConfig() { try { const s = localStorage.getItem(FB_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 
 let firebaseApp = null, rootRef = null, FIREBASE_ENABLED = false;
-
 function initFirebase(cfg) {
   if (firebaseApp) { try { getApps().forEach(a => { try { deleteApp(a); } catch {} }); } catch {} firebaseApp = null; rootRef = null; FIREBASE_ENABLED = false; }
   if (!cfg || !cfg.apiKey || !cfg.databaseURL || String(cfg.apiKey).includes('REPLACE_ME')) return false;
@@ -140,175 +158,38 @@ function initFirebase(cfg) {
 const startConfig = readUrlConfig() || readStoredConfig();
 initFirebase(startConfig);
 
-/* ==========================================
-   طبقة البيانات (Data Layer) - التحديث الاحترافي
-   ========================================== */
-function defaultDB() {
-  return {
-    queue: [],
-    history: [],
-    nextNumber: 1,
-    currentNumber: 0,
-    storeName: '',
-    avgServiceTime: 5,
-    settings: { soundEnabled: true, language: 'ar', theme: 'light', autoRefresh: true },
-    lastUpdated: Date.now()
-  };
-}
-
+/* ============ Data Layer ============ */
+function defaultDB() { return { queue: [], history: [], nextNumber: 1, currentNumber: 0, storeName: '', avgServiceTime: 5, settings: { soundEnabled: true, language: 'ar', theme: 'light' }, lastUpdated: Date.now() }; }
 function normalizeDB(data) {
   if (!data || typeof data !== 'object') return defaultDB();
   const normalized = { ...data };
-
-  // 1. معالجة الطابور
-  if (normalized.queue) {
-    if (Array.isArray(normalized.queue)) {
-      normalized.queue = normalized.queue.filter(Boolean);
-    } else if (typeof normalized.queue === 'object') {
-      normalized.queue = Object.values(normalized.queue)
-        .filter(Boolean)
-        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-    } else {
-      normalized.queue = [];
-    }
-  } else { normalized.queue = []; }
-
-  // 2. معالجة السجل
-  if (normalized.history) {
-    if (Array.isArray(normalized.history)) {
-      normalized.history = normalized.history.filter(Boolean);
-    } else if (typeof normalized.history === 'object') {
-      normalized.history = Object.values(normalized.history)
-        .filter(Boolean)
-        .sort((a, b) => (b.completedAt || b.createdAt || 0) - (a.completedAt || a.createdAt || 0));
-    } else {
-      normalized.history = [];
-    }
-  } else { normalized.history = []; }
-
-  // 3. التأكد من القيم الافتراضية
-  if (!normalized.settings || typeof normalized.settings !== 'object') {
-    normalized.settings = { soundEnabled: true, language: 'ar', theme: 'light' };
-  }
-  if (!normalized.nextNumber || typeof normalized.nextNumber !== 'number') normalized.nextNumber = 1;
-  if (!normalized.currentNumber || typeof normalized.currentNumber !== 'number') normalized.currentNumber = 0;
-  if (typeof normalized.storeName !== 'string') normalized.storeName = '';
-  if (!normalized.avgServiceTime) normalized.avgServiceTime = 5;
-
+  if (normalized.queue) { normalized.queue = Array.isArray(normalized.queue) ? normalized.queue.filter(Boolean) : Object.values(normalized.queue).filter(Boolean).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)); } else { normalized.queue = []; }
+  if (normalized.history) { normalized.history = Array.isArray(normalized.history) ? normalized.history.filter(Boolean) : Object.values(normalized.history).filter(Boolean).sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0)); } else { normalized.history = []; }
+  if (!normalized.settings) normalized.settings = { soundEnabled: true };
+  if (!normalized.nextNumber) normalized.nextNumber = 1;
+  if (!normalized.currentNumber) normalized.currentNumber = 0;
   return normalized;
 }
-
-function loadLocal() {
-  try {
-    const data = localStorage.getItem(DB_KEY);
-    if (data) return JSON.parse(data);
-  } catch (error) { console.error('خطأ في تحميل البيانات المحلية:', error); }
-  return null;
-}
-
-function saveLocal(data) {
-  try { localStorage.setItem(DB_KEY, JSON.stringify(data)); }
-  catch (error) { console.error('خطأ في حفظ البيانات محلياً:', error); throw error; }
-}
-
+function loadLocal() { try { const data = localStorage.getItem(DB_KEY); if (data) return JSON.parse(data); } catch (e) {} return null; }
+function saveLocal(data) { try { localStorage.setItem(DB_KEY, JSON.stringify(data)); } catch (e) {} }
 async function getDB() {
-  if (FIREBASE_ENABLED) {
-    try {
-      const snapshot = await get(rootRef);
-      const rawData = snapshot.val();
-      if (!rawData) return defaultDB();
-      return normalizeDB(rawData);
-    } catch (error) {
-      console.error('❌ خطأ في جلب البيانات من Firebase:', error);
-      const localData = loadLocal();
-      return localData ? normalizeDB(localData) : defaultDB();
-    }
-  }
-  const localData = loadLocal();
-  return localData ? normalizeDB(localData) : defaultDB();
+  if (FIREBASE_ENABLED) { try { const snapshot = await get(rootRef); return normalizeDB(snapshot.val()); } catch (error) { return normalizeDB(loadLocal()); } }
+  return normalizeDB(loadLocal());
 }
-
-let fbUnsub = null;
-let localHandler = null;
-let bc = null;
-
-function cleanupSubscriptions() {
-  if (fbUnsub) { try { fbUnsub(); } catch (error) { console.error(error); } fbUnsub = null; }
-  if (bc) { try { bc.close(); } catch (error) { console.error(error); } bc = null; }
-  if (localHandler) { try { window.removeEventListener('storage', localHandler); } catch (error) { console.error(error); } localHandler = null; }
-}
-
+let fbUnsub = null, localHandler = null;
 function subscribe(cb) {
-  cleanupSubscriptions();
-
-  if (FIREBASE_ENABLED) {
-    fbUnsub = onValue(rootRef, (snapshot) => {
-      try {
-        const rawData = snapshot.val();
-        cb(rawData ? normalizeDB(rawData) : defaultDB());
-      } catch (error) { console.error('❌ خطأ في معالجة تحديث Firebase:', error); cb(defaultDB()); }
-    }, (error) => { console.error('❌ خطأ في الاتصال بـ Firebase:', error); });
-  } else {
-    if (typeof BroadcastChannel !== 'undefined') {
-      bc = new BroadcastChannel('pager_db_channel');
-      bc.onmessage = (event) => {
-        if (event.data && event.data.type === 'DB_UPDATE') {
-          cb(normalizeDB(loadLocal()));
-        }
-      };
-    }
-    localHandler = (e) => {
-      if (e.key === DB_KEY) cb(normalizeDB(loadLocal()));
-    };
-    window.addEventListener('storage', localHandler);
-  }
+  if (fbUnsub) { fbUnsub(); fbUnsub = null; }
+  if (FIREBASE_ENABLED) { fbUnsub = onValue(rootRef, (snapshot) => cb(normalizeDB(snapshot.val()))); }
+  else { localHandler = (e) => { if (e.key === DB_KEY) cb(normalizeDB(loadLocal())); }; window.addEventListener('storage', localHandler); }
 }
-
-function notifyLocalUpdate() {
-  if (bc) { try { bc.postMessage({ type: 'DB_UPDATE', timestamp: Date.now() }); } catch (error) {} }
-  try {
-    const currentData = localStorage.getItem(DB_KEY);
-    localStorage.setItem(DB_KEY, currentData || JSON.stringify(defaultDB()));
-  } catch (error) {}
-}
-
 async function saveDB(data) {
   const normalized = normalizeDB(data);
-  
   if (FIREBASE_ENABLED) {
     try {
-      // هام جداً: إضافة currentNumber و storeName للحفاظ عليها من الحذف
-      const dataToSave = {
-        queue: normalized.queue,
-        history: normalized.history,
-        nextNumber: normalized.nextNumber,
-        currentNumber: normalized.currentNumber,
-        storeName: normalized.storeName,
-        avgServiceTime: normalized.avgServiceTime,
-        settings: normalized.settings,
-        lastUpdated: Date.now()
-      };
-      await set(rootRef, dataToSave);
-      notifyLocalUpdate();
-      return true;
-    } catch (error) {
-      console.error('❌ خطأ في حفظ البيانات في Firebase:', error);
-      try { saveLocal(normalized); } catch (localError) {}
-      throw error;
-    }
-  } else {
-    try {
-      saveLocal(normalized);
-      notifyLocalUpdate();
-      return true;
-    } catch (error) {
-      console.error('❌ خطأ في حفظ البيانات محلياً:', error);
-      throw error;
-    }
-  }
+      await set(rootRef, { queue: normalized.queue, history: normalized.history, nextNumber: normalized.nextNumber, currentNumber: normalized.currentNumber, storeName: normalized.storeName, avgServiceTime: normalized.avgServiceTime });
+    } catch (error) { saveLocal(normalized); throw error; }
+  } else { saveLocal(normalized); }
 }
-
-window.addEventListener('beforeunload', cleanupSubscriptions);
 
 /* ============ Auth & Utils ============ */
 const PASS_KEY = 'pager_admin_pass_v1';
@@ -318,7 +199,24 @@ function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&
 function uid() { return (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)); }
 function toast(msg, ms = 3000) { document.querySelectorAll('.toast').forEach(t => t.remove()); const el = document.createElement('div'); el.className = 'toast'; el.textContent = msg; document.body.appendChild(el); setTimeout(() => el.remove(), ms); }
 
+/* ============ Audio Unlock & Beep ============ */
 let audioCtx = null;
+function unlockAudio() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    g.gain.value = 0.01;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + 0.1);
+  } catch(e) {}
+  document.removeEventListener('touchstart', unlockAudio);
+  document.removeEventListener('click', unlockAudio);
+}
+document.addEventListener('touchstart', unlockAudio);
+document.addEventListener('click', unlockAudio);
+
 function playBeep() {
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -332,10 +230,17 @@ function playBeep() {
 async function requestNotifyPermission() { if (!('Notification' in window)) { toast('المتصفح لا يدعم الإشعارات'); return false; } if (Notification.permission === 'granted') return true; try { return (await Notification.requestPermission()) === 'granted'; } catch { return false; } }
 function showNotification(title, body) { if ('Notification' in window && Notification.permission === 'granted') { try { new Notification(title, { body, tag: 'pager', requireInteraction: true }); } catch {} } }
 
-/* ============ نظام التنبيه المتكرر ============ */
+/* ============ Alarm ============ */
 let alarmInterval = null;
-function startAlarm() { if (alarmInterval) return; playBeep(); alarmInterval = setInterval(() => { playBeep(); if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]); }, 3000); const btn = document.getElementById('stopAlarmBtn'); if (btn) btn.style.display = 'block'; }
-function stopAlarm() { if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; } const btn = document.getElementById('stopAlarmBtn'); if (btn) btn.style.display = 'none'; }
+function startAlarm() { if (alarmInterval) return; playBeep(); alarmInterval = setInterval(() => { playBeep(); if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]); }, 3000); }
+function stopAlarm() { 
+  if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; } 
+  const inlineBtn = document.getElementById('inlineStopBtn');
+  if (inlineBtn) { inlineBtn.style.display = 'none'; document.getElementById('alarmStoppedMsg').style.display = 'block'; }
+  // For waiting screen button
+  const floatBtn = document.getElementById('stopAlarmBtn');
+  if (floatBtn) floatBtn.style.display = 'none';
+}
 
 /* ============ Router ============ */
 let currentView = null;
@@ -348,9 +253,7 @@ function render() {
 }
 
 /* ============ Login View ============ */
-function renderLogin(root) {
-  root.innerHTML = `<header><h1>🔒 لوحة التحكم</h1><p>الرجاء إدخال كلمة المرور</p></header><div class="container"><div class="card login-card"><div style="font-size:3rem; margin-bottom:15px;">🔐</div><input type="password" id="adminPassInput" placeholder="كلمة المرور (الافتراضية 1234)" style="text-align:center; font-size:1.2rem; margin-bottom:15px;" onkeypress="if(event.key==='Enter') window.loginAdmin()"><button onclick="window.loginAdmin()">دخول</button></div></div>`;
-}
+function renderLogin(root) { root.innerHTML = `<header><h1>🔒 لوحة التحكم</h1><p>الرجاء إدخال كلمة المرور</p></header><div class="container"><div class="card login-card"><div style="font-size:3rem; margin-bottom:15px;">🔐</div><input type="password" id="adminPassInput" placeholder="كلمة المرور (الافتراضية 1234)" style="text-align:center; font-size:1.2rem; margin-bottom:15px;" onkeypress="if(event.key==='Enter') window.loginAdmin()"><button onclick="window.loginAdmin()">دخول</button></div></div>`; }
 function loginAdmin() { const val = document.getElementById('adminPassInput').value; if (val === getAdminPass()) { sessionStorage.setItem('pager_admin_auth', 'true'); render(); } else { toast('❌ كلمة المرور غير صحيحة'); } }
 function logoutAdmin() { sessionStorage.removeItem('pager_admin_auth'); render(); }
 
@@ -358,13 +261,11 @@ function logoutAdmin() { sessionStorage.removeItem('pager_admin_auth'); render()
 async function renderAdmin(root) {
   const storedCfg = readStoredConfig();
   const cfgText = storedCfg ? JSON.stringify(storedCfg, null, 2) : '';
-
   root.innerHTML = `
     <header><h1>🔔 البيجر الرقمي</h1><p>لوحة التحكم</p></header>
     <div class="container">
-      ${!FIREBASE_ENABLED && !IS_FILE ? `<div class="setup-warning">⚠️ <strong>وضع تجريبي (جهاز واحد)</strong><br>أضف إعداد Firebase أدناه لتعمل عبر جوالات العملاء.</div>` : ''}
+      ${!FIREBASE_ENABLED && !IS_FILE ? `<div class="setup-warning">⚠️ <strong>وضع تجريبي (جهاز واحد)</strong></div>` : ''}
       ${FIREBASE_ENABLED ? `<div class="setup-success">✅ Firebase مُفعّل — يعمل عبر الأجهزة</div>` : ''}
-
       <div class="card">
         <h2>الدور الحالي</h2>
         <div class="big-number" id="currentNum">—</div>
@@ -374,13 +275,8 @@ async function renderAdmin(root) {
           <button class="secondary" onclick="window.completeCurrent()">✅ إنهاء</button>
         </div>
       </div>
-
-      <div class="card">
-        <button onclick="window.openQuickCashier()" style="background:var(--warn); font-size:1.2rem; padding:20px; color:#fff;">⚡ وضع الكاشير السريع (ربط الفاتورة)</button>
-      </div>
-
+      <div class="card"><button onclick="window.openQuickCashier()" style="background:var(--warn); font-size:1.2rem; padding:20px; color:#fff;">⚡ وضع الكاشير السريع</button></div>
       <div class="card"><button onclick="window.showReport()">📊 التقارير (يومي / أسبوعي / شهري)</button></div>
-
       <div class="card">
         <h2>إضافة عميل يدوياً</h2>
         <div class="form-group"><label>اسم العميل (اختياري)</label><input id="custName" placeholder="مثال: أحمد" maxlength="40"></div>
@@ -388,146 +284,67 @@ async function renderAdmin(root) {
         <button onclick="window.addCustomer()">➕ إضافة وتوليد رابط/QR</button>
         <div id="newCustomerBox"></div>
       </div>
-
-      <div class="card">
-        <h2>الطابور (<span id="queueCount">0</span>)</h2>
-        <div id="queueList"></div>
-      </div>
-
-      <div class="card">
-        <h2>⚙️ إعدادات المنشأة</h2>
-        <div class="form-group">
-          <label>اسم المنشأة (يظهر في الترحيب والتقارير)</label>
-          <div class="settings-row">
-            <input id="storeNameInput" placeholder="مثال: مطعم الأصالة" maxlength="60">
-            <button onclick="window.saveStoreName()">💾 حفظ</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>🔒 الأمان</h2>
-        <div class="form-group">
-          <label>تغيير كلمة مرور لوحة التحكم</label>
-          <div class="settings-row">
-            <input id="newPassInput" type="password" placeholder="كلمة المرور الجديدة">
-            <button onclick="window.saveNewPass()">💾 حفظ</button>
-          </div>
-        </div>
-        <button class="secondary" onclick="window.logoutAdmin()" style="margin-top:10px;">🚪 تسجيل الخروج</button>
-      </div>
-
-      <div class="card">
-        <h2>🔥 إعداد Firebase (مجاني)</h2>
-        <div class="form-group">
-          <label>تكوين Firebase (JSON)</label>
-          <textarea id="fbConfigInput" rows="6" placeholder='{ "apiKey": "...", "databaseURL": "https://....firebaseio.com", "projectId": "..." }'>${esc(cfgText)}</textarea>
-        </div>
-        <div class="btn-row">
-          <button onclick="window.saveFirebaseConfig()">💾 حفظ وتفعيل</button>
-          <button class="secondary" onclick="window.clearFirebaseConfig()">🗑️ إزالة</button>
-        </div>
-      </div>
-
-      <div class="footer">البيجر الرقمي · نسخة مجانية</div>
-    </div>
-  `;
-  const db = await getDB();
-  const inp = document.getElementById('storeNameInput');
-  if (inp) inp.value = db.storeName || '';
+      <div class="card"><h2>الطابور (<span id="queueCount">0</span>)</h2><div id="queueList"></div></div>
+      <div class="card"><h2>⚙️ إعدادات المنشأة</h2><div class="form-group"><label>اسم المنشأة (يظهر في الترحيب والتقارير)</label><div class="settings-row"><input id="storeNameInput" placeholder="اسم المحل" maxlength="60"><button onclick="window.saveStoreName()">💾 حفظ</button></div></div></div>
+      <div class="card"><h2>🔒 الأمان</h2><div class="form-group"><label>تغيير كلمة المرور</label><div class="settings-row"><input id="newPassInput" type="password" placeholder="كلمة المرور الجديدة"><button onclick="window.saveNewPass()">💾 حفظ</button></div></div><button class="secondary" onclick="window.logoutAdmin()" style="margin-top:10px;">🚪 تسجيل الخروج</button></div>
+      <div class="card"><h2>🔥 إعداد Firebase</h2><div class="form-group"><label>تكوين Firebase (JSON)</label><textarea id="fbConfigInput" rows="6" placeholder='{ "apiKey": "...", "databaseURL": "..." }'>${esc(cfgText)}</textarea></div><div class="btn-row"><button onclick="window.saveFirebaseConfig()">💾 حفظ وتفعيل</button><button class="secondary" onclick="window.clearFirebaseConfig()">🗑️ إزالة</button></div></div>
+      <div class="footer">البيجر الرقمي</div>
+    </div>`;
+  const db = await getDB(); const inp = document.getElementById('storeNameInput'); if (inp) inp.value = db.storeName || '';
   refreshAdmin();
 }
-
-/* ============ Admin Data Functions ============ */
-function saveNewPass() { const inp = document.getElementById('newPassInput'); if (!inp || !inp.value.trim()) { toast('أدخل كلمة مرور جديدة'); return; } localStorage.setItem(PASS_KEY, inp.value.trim()); toast('✅ تم تغيير كلمة المرور'); inp.value = ''; }
-function saveFirebaseConfig() { const txt = document.getElementById('fbConfigInput').value.trim(); if (!txt) { toast('أدخل التكوين أولاً'); return; } let cfg = null; try { cfg = JSON.parse(txt); } catch { const m = txt.match(/\{[\s\S]*\}/); if (m) { try { cfg = JSON.parse(m[0]); } catch {} } } if (!cfg) { toast('التنسيق غير صحيح'); return; } if (!cfg.apiKey || !cfg.databaseURL) { toast('يجب أن يحتوي على apiKey و databaseURL'); return; } localStorage.setItem(FB_KEY, JSON.stringify(cfg)); if (!initFirebase(cfg)) { toast('❌ فشل التهيئة'); return; } subscribe(handleDataUpdate); toast('✅ تم تفعيل Firebase'); renderAdmin(document.getElementById('app')); }
+function saveNewPass() { const inp = document.getElementById('newPassInput'); if (!inp || !inp.value.trim()) { toast('أدخل كلمة مرور جديدة'); return; } localStorage.setItem(PASS_KEY, inp.value.trim()); toast('✅ تم التغيير'); inp.value = ''; }
+function saveFirebaseConfig() { const txt = document.getElementById('fbConfigInput').value.trim(); let cfg = null; try { cfg = JSON.parse(txt); } catch { const m = txt.match(/\{[\s\S]*\}/); if (m) { try { cfg = JSON.parse(m[0]); } catch {} } } if (!cfg || !cfg.apiKey || !cfg.databaseURL) { toast('التنسيق غير صحيح'); return; } localStorage.setItem(FB_KEY, JSON.stringify(cfg)); if (!initFirebase(cfg)) { toast('❌ فشل التهيئة'); return; } subscribe(handleDataUpdate); toast('✅ تم تفعيل Firebase'); renderAdmin(document.getElementById('app')); }
 function clearFirebaseConfig() { if (!confirm('إزالة تكوين Firebase؟')) return; localStorage.removeItem(FB_KEY); initFirebase(null); subscribe(handleDataUpdate); toast('تمت الإزالة'); renderAdmin(document.getElementById('app')); }
-async function saveStoreName() { const name = (document.getElementById('storeNameInput').value || '').trim(); const db = await getDB(); await saveDB({ ...db, storeName: name }); toast('تم حفظ اسم المنشأة'); }
+async function saveStoreName() { const name = (document.getElementById('storeNameInput').value || '').trim(); const db = await getDB(); await saveDB({ ...db, storeName: name }); toast('تم حفظ الاسم'); }
 
 async function refreshAdmin() {
   if (currentView !== 'admin') return;
-  const db = await getDB();
-  const queue = db.queue || [];
-  const waiting = queue.filter(c => c.status === 'waiting').sort((a,b) => a.number - b.number);
-  const serving = queue.find(c => c.status === 'serving');
+  const db = await getDB(); const queue = db.queue || []; const waiting = queue.filter(c => c.status === 'waiting').sort((a,b) => a.number - b.number); const serving = queue.find(c => c.status === 'serving');
   const cn = document.getElementById('currentNum'); if (cn) cn.textContent = serving ? serving.number : '—';
   const cs = document.getElementById('currentSub'); if (cs) cs.textContent = serving ? `${serving.name} · يُخدم الآن` : 'لا يوجد عميل يُخدم الآن';
   const qc = document.getElementById('queueCount'); if (qc) qc.textContent = waiting.length;
   const ql = document.getElementById('queueList'); if (!ql) return;
   if (!waiting.length && !serving) { ql.innerHTML = '<div class="empty">لا يوجد عملاء في الطابور</div>'; return; }
   let html = '';
-  if (serving) { html += `<div class="queue-item serving"><div class="num">${serving.number}</div><div class="info"><div class="name">${esc(serving.name)}</div><div class="meta">يُخدم الآن</div></div><div class="actions"><button class="icon-btn danger" onclick="window.cancelCustomer('${serving.id}')">✕</button></div></div>`; }
+  if (serving) html += `<div class="queue-item serving"><div class="num">${serving.number}</div><div class="info"><div class="name">${esc(serving.name)}</div><div class="meta">يُخدم الآن</div></div><div class="actions"><button class="icon-btn danger" onclick="window.cancelCustomer('${serving.id}')">✕</button></div></div>`;
   waiting.forEach((c, i) => { html += `<div class="queue-item"><div class="num">${c.number}</div><div class="info"><div class="name">${esc(c.name)}</div><div class="meta">بالانتظار · ترتيبه ${i+1}</div></div><div class="actions"><button class="icon-btn" onclick="window.showQR('${c.id}')" title="عرض QR">▦</button><button class="icon-btn danger" onclick="window.cancelCustomer('${c.id}')">✕</button></div></div>`; });
   ql.innerHTML = html;
 }
 
 function buildCustomerLink(customerId) { const base = `${location.origin}${location.pathname}?token=${customerId}`; if (!FIREBASE_ENABLED) return base; const cfg = readStoredConfig(); if (!cfg) return base; try { const b64 = btoa(encodeURIComponent(JSON.stringify(cfg))); return `${base}&cfg=${encodeURIComponent(b64)}`; } catch { return base; } }
-
 async function addCustomer() {
-  const name = (document.getElementById('custName').value || '').trim() || 'عميل';
-  const phone = (document.getElementById('custPhone').value || '').trim();
-  const db = await getDB();
-  const customer = { id: uid(), number: db.nextNumber, name, phone, status: 'waiting', createdAt: Date.now() };
-  const queue = (db.queue || []).concat(customer);
-  await saveDB({ ...db, queue, nextNumber: db.nextNumber + 1 });
+  const name = (document.getElementById('custName').value || '').trim() || 'عميل'; const phone = (document.getElementById('custPhone').value || '').trim();
+  const db = await getDB(); const customer = { id: uid(), number: db.nextNumber, name, phone, status: 'waiting', createdAt: Date.now() };
+  const queue = (db.queue || []).concat(customer); await saveDB({ ...db, queue, nextNumber: db.nextNumber + 1 });
   document.getElementById('custName').value = ''; document.getElementById('custPhone').value = '';
-  toast(`تمت إضافة ${customer.name} برقم ${customer.number}`);
-  showQR(customer.id);
+  toast(`تمت إضافة ${customer.name} برقم ${customer.number}`); showQR(customer.id);
 }
-
 function copyText(t) { navigator.clipboard.writeText(t).then(() => toast('تم النسخ')).catch(() => toast('تعذر النسخ')); }
 function shareLink(t) { if (navigator.share) navigator.share({ title: 'رابط دورك', url: t }).catch(() => {}); else copyText(t); }
-
 function showQR(id) {
-  const link = buildCustomerLink(id);
-  const box = document.getElementById('newCustomerBox');
-  const canQR = !IS_FILE;
-  box.innerHTML = `<div class="qr-box">
-    ${canQR ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(link)}" alt="QR">` : '<div class="setup-warning danger">QR يحتاج استضافة</div>'}
-    <div class="link">${esc(link)}</div>
-    <div class="btn-row"><button class="secondary" onclick="window.copyText('${esc(link)}')">📋 نسخ</button><button class="secondary" onclick="window.shareLink('${esc(link)}')">📤 مشاركة</button></div>
-  </div>`;
+  const link = buildCustomerLink(id); const box = document.getElementById('newCustomerBox'); const canQR = !IS_FILE;
+  box.innerHTML = `<div class="qr-box">${canQR ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(link)}" alt="QR">` : '<div class="setup-warning danger">QR يحتاج استضافة</div>'}<div class="link">${esc(link)}</div><div class="btn-row"><button class="secondary" onclick="window.copyText('${esc(link)}')">📋 نسخ</button><button class="secondary" onclick="window.shareLink('${esc(link)}')">📤 مشاركة</button></div></div>`;
   box.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
-
 async function callNext() {
-  const db = await getDB();
-  let queue = (db.queue || []).filter(c => c.status !== 'done');
+  const db = await getDB(); let queue = (db.queue || []).filter(c => c.status !== 'done');
   const waiting = queue.filter(c => c.status === 'waiting').sort((a,b) => a.number - b.number);
   if (!waiting.length) { toast('لا يوجد عملاء في الانتظار'); return; }
-  queue = queue.filter(c => c.status !== 'serving');
-  const next = waiting[0]; next.status = 'serving'; next.servedAt = Date.now();
-  await saveDB({ ...db, queue, currentNumber: next.number });
-  showNotification('🔔 دور جديد', `يُخدم الآن رقم ${next.number} - ${next.name}`);
+  queue = queue.filter(c => c.status !== 'serving'); const next = waiting[0]; next.status = 'serving'; next.servedAt = Date.now();
+  await saveDB({ ...db, queue, currentNumber: next.number }); showNotification('🔔 دور جديد', `يُخدم الآن رقم ${next.number} - ${next.name}`);
 }
 async function completeCurrent() { const db = await getDB(); const serving = (db.queue || []).find(c => c.status === 'serving'); const queue = (db.queue || []).filter(c => c.status !== 'serving'); const history = (db.history || []).slice(); if (serving) history.push({ ...serving, status: 'done', completedAt: Date.now() }); await saveDB({ ...db, queue, history, currentNumber: 0 }); toast('تم إنهاء الدور'); }
 async function cancelCustomer(id) { const db = await getDB(); const customer = (db.queue || []).find(c => c.id === id); const queue = (db.queue || []).filter(c => c.id !== id); const history = (db.history || []).slice(); if (customer) history.push({ ...customer, status: 'cancelled', completedAt: Date.now() }); await saveDB({ ...db, queue, history }); toast('تم الإلغاء'); }
 
-/* ============ Quick Cashier Logic ============ */
+/* ============ Quick Cashier ============ */
 async function processQuickInvoice(e) {
-  if (e.key !== 'Enter') return;
-  const input = document.getElementById('quickInvoiceInput');
-  const invoiceNumber = input.value.trim();
-  if (!invoiceNumber) return;
-
-  const db = await getDB();
-  const customer = { id: uid(), number: db.nextNumber, name: `فاتورة ${invoiceNumber}`, phone: '', status: 'waiting', createdAt: Date.now() };
-  const queue = (db.queue || []).concat(customer);
-  await saveDB({ ...db, queue, nextNumber: db.nextNumber + 1 });
-  
-  playBeep();
-  document.getElementById('quickResult').innerHTML = `✅ تم إضافة الفاتورة (${invoiceNumber}) برقم دور ${customer.number}`;
-  input.value = '';
-  showQR(customer.id);
+  if (e.key !== 'Enter') return; const input = document.getElementById('quickInvoiceInput'); const invoiceNumber = input.value.trim(); if (!invoiceNumber) return;
+  const db = await getDB(); const customer = { id: uid(), number: db.nextNumber, name: `فاتورة ${invoiceNumber}`, phone: '', status: 'waiting', createdAt: Date.now() };
+  const queue = (db.queue || []).concat(customer); await saveDB({ ...db, queue, nextNumber: db.nextNumber + 1 });
+  playBeep(); document.getElementById('quickResult').innerHTML = `✅ تم إضافة الفاتورة (${invoiceNumber}) برقم دور ${customer.number}`; input.value = ''; showQR(customer.id);
 }
-function openQuickCashier() {
-  const screen = document.getElementById('quickCashierScreen');
-  screen.style.display = 'flex';
-  const input = document.getElementById('quickInvoiceInput');
-  input.value = '';
-  input.focus();
-  document.getElementById('quickResult').innerHTML = '';
-}
+function openQuickCashier() { const screen = document.getElementById('quickCashierScreen'); screen.style.display = 'flex'; const input = document.getElementById('quickInvoiceInput'); input.value = ''; input.focus(); document.getElementById('quickResult').innerHTML = ''; }
 function closeQuickCashier() { document.getElementById('quickCashierScreen').style.display = 'none'; }
 
 /* ============ Reports ============ */
@@ -545,7 +362,6 @@ function getRange(period, anchor) {
   else { start = new Date(d.getFullYear(), d.getMonth(), 1); end = new Date(d.getFullYear(), d.getMonth() + 1, 1); label = start.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' }); }
   return { start: start.getTime(), end: end.getTime(), label };
 }
-
 function renderReport(db) {
   const root = document.getElementById('app'); const now = Date.now(); const range = getRange(reportPeriod, reportAnchor); const isCurrent = range.start <= now && now < range.end;
   const inRange = (ms) => ms && ms >= range.start && ms < range.end;
@@ -558,7 +374,6 @@ function renderReport(db) {
   const peakHourStr = peakHour !== null ? `${String(peakHour).padStart(2,'0')}:00` : '—';
   const fmtTime = (ms) => ms ? new Date(ms).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '—';
   const periodLabels = { daily: 'تقرير يومي', weekly: 'تقرير أسبوعي', monthly: 'تقرير شهري' };
-  
   let tableRows = '';
   allRows.forEach((r, i) => {
     let rowStatus, statusLabel;
@@ -567,22 +382,8 @@ function renderReport(db) {
     tableRows += `<tr><td>${i+1}</td><td><strong>${r.number}</strong></td><td>${esc(r.name)}</td><td>${fmtTime(r.createdAt)}</td><td>${fmtTime(r.servedAt)}</td><td>${fmtTime(r.completedAt)}</td><td>${waitMin}</td><td><span class="status-tag status-${rowStatus}">${statusLabel}</span></td></tr>`;
   });
   if (!allRows.length) tableRows = `<tr><td colspan="8" style="text-align:center;padding:24px;color:#999">لا توجد بيانات</td></tr>`;
-
   let statsHtml = `<div class="rstat"><div class="rval">${allRows.length}</div><div class="rlbl">إجمالي</div></div><div class="rstat"><div class="rval">${done.length}</div><div class="rlbl">مكتمل</div></div><div class="rstat"><div class="rval">${cancelled.length}</div><div class="rlbl">ملغي</div></div><div class="rstat"><div class="rval">${avgWait}</div><div class="rlbl">متوسط الانتظار</div></div><div class="rstat"><div class="rval">${peakHourStr}</div><div class="rlbl">الذروة</div></div>`;
-
-  root.innerHTML = `
-    <div class="container">
-      <div class="no-print">
-        <div class="period-nav"><button class="period-btn ${reportPeriod==='daily'?'active':''}" onclick="window.setReportPeriod('daily')">📅 يومي</button><button class="period-btn ${reportPeriod==='weekly'?'active':''}" onclick="window.setReportPeriod('weekly')">📆 أسبوعي</button><button class="period-btn ${reportPeriod==='monthly'?'active':''}" onclick="window.setReportPeriod('monthly')">🗓️ شهري</button></div>
-        <div class="period-nav-row"><button class="secondary" onclick="window.navReport(-1)">السابق</button><div class="period-label">${range.label}</div><button class="secondary" onclick="window.navReport(1)">التالي</button></div>
-        <div class="period-nav-row"><button class="secondary" onclick="window.goReportToday()" style="flex:1">📌 اليوم</button><input type="date" class="date-input" value="${new Date(reportAnchor).toISOString().slice(0, 10)}" onchange="window.jumpToDate(this.value)"><button onclick="window.print()" style="flex:1">🖨️ طباعة</button><button class="secondary" onclick="window.backToAdmin()" style="flex:1">↩ رجوع</button></div>
-      </div>
-      <div class="report" id="reportPrint">
-        <div class="report-header"><h1>📊 ${periodLabels[reportPeriod]}</h1><div class="report-store">${esc(db.storeName || 'البيجر')}</div><div class="report-period-badge">${range.label}</div></div>
-        <div class="report-stats">${statsHtml}</div>
-        <table class="report-table"><thead><tr><th>#</th><th>الرقم</th><th>الاسم</th><th>الوصول</th><th>النداء</th><th>الإنهاء</th><th>الانتظار</th><th>الحالة</th></tr></thead><tbody>${tableRows}</tbody></table>
-      </div>
-    </div>`;
+  root.innerHTML = `<div class="container"><div class="no-print"><div class="period-nav"><button class="period-btn ${reportPeriod==='daily'?'active':''}" onclick="window.setReportPeriod('daily')">📅 يومي</button><button class="period-btn ${reportPeriod==='weekly'?'active':''}" onclick="window.setReportPeriod('weekly')">📆 أسبوعي</button><button class="period-btn ${reportPeriod==='monthly'?'active':''}" onclick="window.setReportPeriod('monthly')">🗓️ شهري</button></div><div class="period-nav-row"><button class="secondary" onclick="window.navReport(-1)">السابق</button><div class="period-label">${range.label}</div><button class="secondary" onclick="window.navReport(1)">التالي</button></div><div class="period-nav-row"><button class="secondary" onclick="window.goReportToday()" style="flex:1">📌 اليوم</button><input type="date" class="date-input" value="${new Date(reportAnchor).toISOString().slice(0, 10)}" onchange="window.jumpToDate(this.value)"><button onclick="window.print()" style="flex:1">🖨️ طباعة</button><button class="secondary" onclick="window.backToAdmin()" style="flex:1">↩ رجوع</button></div></div><div class="report" id="reportPrint"><div class="report-header"><h1>📊 ${periodLabels[reportPeriod]}</h1><div class="report-store">${esc(db.storeName || 'البيجر')}</div><div class="report-period-badge">${range.label}</div></div><div class="report-stats">${statsHtml}</div><table class="report-table"><thead><tr><th>#</th><th>الرقم</th><th>الاسم</th><th>الوصول</th><th>النداء</th><th>الإنهاء</th><th>الانتظار</th><th>الحالة</th></tr></thead><tbody>${tableRows}</tbody></table></div></div>`;
 }
 function backToAdmin() { currentView = 'admin'; renderAdmin(document.getElementById('app')); }
 
@@ -607,8 +408,30 @@ async function refreshCustomer() {
   
   if (me.status === 'serving') {
     if (header) header.style.display = 'none'; 
-    if (lastNotifiedState !== 'serving') { startAlarm(); showNotification('🎉 حان دورك الآن!', `رقمك ${me.number}`); lastNotifiedState = 'serving'; }
-    content.innerHTML = `<div style="text-align:center; padding-top: 10vh;"><div style="font-size:5rem; margin-bottom:10px; animation: pulse 2s infinite;">🔔</div><h1 style="color:var(--success); font-size:2rem; margin-bottom:10px;">حان دورك الآن!</h1><div class="big-number" style="color:var(--success); font-size:7rem; margin:20px 0; line-height:1;">${me.number}</div><p style="font-size:1.3rem; color:var(--muted); margin-bottom:40px;">يرجى التوجه لنقطة الخدمة</p><button onclick="window.stopAlarm()" style="background-color:var(--danger); color:#fff; padding:25px; font-size:1.6rem; border-radius:15px; box-shadow:0 6px 20px rgba(219,68,55,0.5); width:100%; display:flex; justify-content:center; align-items:center; gap:15px; animation: pulse 1.5s infinite;"><span>🛑</span><span>إيقاف التنبيه</span></button></div>`; return;
+    const fixedBtn = document.getElementById('stopAlarmBtn'); if(fixedBtn) fixedBtn.style.display = 'none'; // hide fixed button
+    
+    if (lastNotifiedState !== 'serving') { 
+        startAlarm(); 
+        showNotification('🎉 حان دورك الآن!', `رقمك ${me.number}`); 
+        lastNotifiedState = 'serving'; 
+    }
+    content.innerHTML = `
+      <div class="serving-wrapper">
+        <div class="serving-card">
+          <div class="serving-store">${esc(db.storeName || 'البيجر الرقمي')}</div>
+          <div class="serving-bell">🔔</div>
+          <h1 class="serving-title">حان دورك الآن!</h1>
+          <div class="serving-number">${me.number}</div>
+          <p class="serving-desc">يرجى التوجه لنقطة الخدمة</p>
+          
+          <button id="inlineStopBtn" onclick="window.stopAlarm()" class="serving-stop-btn">
+            <span>🛑</span>
+            <span>إيقاف التنبيه</span>
+          </button>
+          <div id="alarmStoppedMsg" style="display:none; color:var(--success); font-size:1.1rem; margin-top:20px; font-weight:bold;">✅ تم إيقاف التنبيه. يرجى التوجه للكاشير.</div>
+        </div>
+      </div>`;
+    return;
   }
   
   if (header) header.style.display = 'block'; if (lastNotifiedState === 'serving') lastNotifiedState = null;
@@ -617,17 +440,29 @@ async function refreshCustomer() {
   const current = db.currentNumber || 0;
   if (ahead <= 1 && ahead >= 0 && lastNotifiedState !== 'near') { showNotification('⏰ اقترب دورك', `رقمك ${me.number}`); lastNotifiedState = 'near'; } else if (ahead > 2) { lastNotifiedState = null; }
   
-  content.innerHTML = `<div class="welcome-banner"><h2>👋 أهلاً بك في ${esc(db.storeName || 'البيجر')}</h2><p>تم تسجيل دورك بنجاح.</p></div><div class="ahead-card"><div class="ahead-icon">👥</div><div class="ahead-info"><div class="title">المنتظرين قبلك</div><div class="count">${ahead === 0 ? 'أنت التالي!' : `${ahead} ${ahead === 1 ? 'شخص' : 'أشخاص'}`}</div></div></div><div class="card" style="text-align:center"><h2 style="color:var(--muted); font-size:1rem">رقم دورك</h2><div class="big-number">${me.number}</div></div><div class="card" style="text-align:center"><h2 style="color:var(--muted); font-size:1rem">يُخدم الآن</h2><div class="big-number" style="color:var(--muted)">${current || '—'}</div></div><div class="footer">أبقِ الصفحة مفتوحة</div>`;
+  const needPerm = 'Notification' in window && Notification.permission !== 'granted';
+  
+  content.innerHTML = `
+    <div class="welcome-banner"><h2>👋 أهلاً بك في ${esc(db.storeName || 'البيجر')}</h2><p>تم تسجيل دورك بنجاح.</p></div>
+    ${needPerm ? `<div class="setup-warning">🔕 اسمح بالإشعارات واضغط الزر ليعمل الصوت:</div><div class="card" style="padding:10px"><button onclick="window.enableCustomerNotifs()">🔔 تفعيل الإشعارات والصوت</button></div>` : ''}
+    <div class="ahead-card"><div class="ahead-icon">👥</div><div class="ahead-info"><div class="title">المنتظرين قبلك</div><div class="count">${ahead === 0 ? 'أنت التالي!' : `${ahead} ${ahead === 1 ? 'شخص' : 'أشخاص'}`}</div></div></div>
+    <div class="card" style="text-align:center"><h2 style="color:var(--muted); font-size:1rem">رقم دورك</h2><div class="big-number">${me.number}</div></div>
+    <div class="card" style="text-align:center"><h2 style="color:var(--muted); font-size:1rem">يُخدم الآن</h2><div class="big-number" style="color:var(--muted)">${current || '—'}</div></div>
+    <div class="footer">أبقِ الصفحة مفتوحة</div>`;
 }
 
-async function enableCustomerNotifs() { const ok = await requestNotifyPermission(); if (ok) { playBeep(); toast('✅ تم تفعيل الإشعارات'); } else toast('لم يتم السماح'); refreshCustomer(); }
+async function enableCustomerNotifs() { 
+  const ok = await requestNotifyPermission(); 
+  unlockAudio(); // Unlock audio context
+  if (ok) { playBeep(); toast('✅ تم تفعيل الإشعارات والصوت'); } else toast('تم تفعيل الصوت فقط');
+  refreshCustomer(); 
+}
 
 /* ============ Boot ============ */
 document.getElementById('quickInvoiceInput')?.addEventListener('keypress', processQuickInvoice);
 subscribe(handleDataUpdate);
 render();
 
-/* ============ Expose to window ============ */
 Object.assign(window, {
   callNext, completeCurrent, addCustomer, copyText, shareLink, showQR, cancelCustomer,
   showReport, backToAdmin, saveStoreName, enableCustomerNotifs,
@@ -639,14 +474,9 @@ Object.assign(window, {
 
 <!-- شاشة الكاشير السريع -->
 <div id="quickCashierScreen" style="display: none; position: fixed; inset: 0; background: var(--bg); z-index: 5000; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
-    <div style="text-align:center; margin-bottom:20px;">
-        <h1 style="color:var(--primary); font-size:2rem;">⚡ إضافة سريعة (كاشير)</h1>
-        <p style="color:var(--muted);">امسح باركود الفاتورة أو اكتب رقمها واضغط Enter</p>
-    </div>
-    <input type="text" id="quickInvoiceInput" class="quick-input" placeholder="رقم الفاتورة / الباركود" autocomplete="off" style="font-size: 2rem !important; text-align: center; padding: 20px !important; border: 3px solid var(--primary) !important; border-radius: 15px !important; width: 100%; max-width: 500px; margin-bottom: 20px; font-weight: bold;">
-    <div class="btn-row" style="max-width:500px; width:100%;">
-        <button class="secondary" onclick="window.closeQuickCashier()" style="padding:15px; font-size:1.1rem;">إغلاق</button>
-    </div>
+    <div style="text-align:center; margin-bottom:20px;"><h1 style="color:var(--primary); font-size:2rem;">⚡ إضافة سريعة (كاشير)</h1><p style="color:var(--muted);">امسح باركود الفاتورة أو اكتب رقمها واضغط Enter</p></div>
+    <input type="text" id="quickInvoiceInput" placeholder="رقم الفاتورة / الباركود" autocomplete="off" style="font-size: 2rem !important; text-align: center; padding: 20px !important; border: 3px solid var(--primary) !important; border-radius: 15px !important; width: 100%; max-width: 500px; margin-bottom: 20px; font-weight: bold;">
+    <div class="btn-row" style="max-width:500px; width:100%;"><button class="secondary" onclick="window.closeQuickCashier()" style="padding:15px; font-size:1.1rem;">إغلاق</button></div>
     <div id="quickResult" style="margin-top:20px; text-align:center; font-size:1.2rem; font-weight:bold; color:var(--success);"></div>
 </div>
 </body>
